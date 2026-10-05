@@ -1,33 +1,32 @@
 # Local Stock Lab
 
-A local, analysis-only stock and options research app. FastAPI serves the
-dashboard, Options, Classification and Features pages; SQLite stores local
-observations. It does not submit trades. This is a fresh sharing copy, not a
-backup of the original owner's portfolio.
+A local stock and options research app for separating **technical strength**,
+**entry readiness**, and **options contract quality**. It explains the evidence
+behind its classifications and keeps research observations in a local SQLite
+database. It does not place orders or import broker positions.
 
-## What is deliberately absent
+## What you can explore
 
-No API keys, account credentials, positions, watchlist, confirmed profiles,
-database, scan history, logs, Git history, private document links or original
-tests/fixtures are included. Only explicitly selected application files and the
-package manifest are copied. All configuration examples are generated anew.
-The original product name is replaced with a neutral name.
+| Page | Purpose |
+| --- | --- |
+| Dashboard | Review technical setups, structural entry plans, and readiness blockers. |
+| Options | Filter and rank call contracts by DTE, delta, liquidity, IV, and data quality. |
+| Classification | Review research profiles and explicitly accept or reject proposed role changes. |
+| Features | Browse the available workflows and terminology. |
 
-The dormant Starter research module is disabled, with an empty stock universe
-instead of the original fixed list. Its export-only validation allows a future
-owner to supply their own `approved_tickers`; the original app is not changed.
-Do not enable experimental research without reviewing its policy.
+A strong stock is not automatically a good entry. A qualified equity setup is
+not automatically a suitable option. Scores describe configured rules and data;
+they are not probabilities of profit.
 
-`EXPORT-MANIFEST.json` records hashes of the initial exported files, not an
-ongoing security certification. Heuristic credential checks cannot guarantee
-that all sensitive information was found. Review every file before sharing.
+## Quick start (macOS, Python 3.12+)
 
-## Run locally (macOS, Python 3.12+)
-
-Use a separate folder from any existing installation. Work from this folder
-each time: the default SQLite path is relative to the working directory.
+Clone into a new directory, then run the following commands from the project
+root. The copy commands are for first-time setup; do not overwrite an existing
+`.env` or personal configuration when updating the app.
 
 ```bash
+git clone https://github.com/luonan54/trading_lab.git
+cd trading_lab
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
@@ -39,32 +38,62 @@ cp config/starter.example.yaml config/starter.yaml
 python -m uvicorn app.main:app --host 127.0.0.1 --port 9068
 ```
 
-Open <http://127.0.0.1:9068/>. If port 9068 is already in use, use 9069 instead.
-The terminal must remain open. Stop with Ctrl+C; restart with the same uvicorn
-command from this folder and the activated environment. No machine-specific
-LaunchAgent or background task is installed.
+Open <http://127.0.0.1:9068/>. Keep the terminal running; stop with Ctrl+C.
+For subsequent launches, activate `.venv` and run the same uvicorn command from
+the project root. The default database path is relative to the working directory.
 
-An empty dashboard is expected before adding symbols and scanning. Local pages
-can load without credentials; live data cannot. This is a localhost app, not a
-hardened multi-user internet service: do not expose its port publicly.
+An empty dashboard is expected initially. Follow the configuration sections
+below, restart the app, then request a scan from the dashboard. Pages can load
+without provider credentials; live market-data requests cannot.
 
-## Connect your own Alpaca account
+## Connect Alpaca
 
-Create your own account at <https://alpaca.markets/> and generate keys in the
-Paper Trading dashboard. Enter them only in your local `.env`, never in source
-code, example files, screenshots, Git commits or GitHub repository settings.
+Put your own credentials in the local `.env` file. The tracked
+[.env.example](.env.example) intentionally has blank credential values.
 
-The app reads `ALPACA_API_KEY` and `ALPACA_API_SECRET`. Keep
-`ALPACA_TRADING_BASE_URL=https://paper-api.alpaca.markets` for paper credentials;
-paper and live credentials/endpoints are not interchangeable.
-Market data uses <https://data.alpaca.markets>. See the provider's current
-documentation at <https://docs.alpaca.markets/> for account and data entitlements.
+| Variable | Purpose / default |
+| --- | --- |
+| `ALPACA_API_KEY` | Your Alpaca API key. |
+| `ALPACA_API_SECRET` | Your Alpaca API secret. |
+| `ALPACA_DATA_FEED` | Equity feed; defaults to `iex`. |
+| `ALPACA_OPTIONS_FEED` | Options feed; defaults to `indicative`. |
+| `ALPACA_TRADING_BASE_URL` | Defaults to `https://paper-api.alpaca.markets`; used for option contract metadata. |
+| `DATABASE_URL` | Defaults to `sqlite:///data/ceg_trader.db`. |
 
-The default equity feed is `iex` (not consolidated SIP); the default options
-feed is `indicative`. Prices can differ from another broker. Enable paid feeds
-only if your account is authorized. Restart after editing `.env`.
-Timeouts can have network, provider or local-process causes; they do not by
-themselves establish that a key expired or that a particular network is blocked.
+Use paper credentials with the paper endpoint. Data requests use
+`https://data.alpaca.markets`. See [Alpaca documentation](https://docs.alpaca.markets/)
+for credential setup and current data entitlements. The default equity feed is
+not consolidated SIP, and the options feed is indicative; displayed prices can
+differ from another broker. Changing a feed setting does not grant access to it.
+
+Restart after configuration changes. Existing process environment variables take
+precedence over values loaded from `.env`; check both if a change seems ignored.
+
+## Authentication and local access
+
+This app has **no user login, session authentication, or per-user authorization**.
+Anyone who can reach its HTTP service can access its exposed routes, including
+scan and profile mutation endpoints. Keep it bound to `127.0.0.1`; this version
+is not designed for public hosting or shared multi-user access.
+
+Provider authentication happens in the Python backend:
+
+1. [`load_config()`](app/config.py) reads `.env` and environment variables.
+2. [`create_app()`](app/main.py) initializes the scan services with that configuration.
+3. [`AlpacaMarketDataClient`](app/alpaca.py) and
+   [`AlpacaOptionsDataProvider`](app/options/provider.py) send credentials over HTTPS
+   using `APCA-API-KEY-ID` and `APCA-API-SECRET-KEY` headers.
+4. The services process responses and return research results to the browser.
+
+Credentials are ordinary strings held in backend memory, and `.env` is a local
+plaintext file, not an encrypted credential vault. There is no OAuth, JWT,
+access-token refresh, or in-app key rotation flow. Rotate credentials with the
+provider, update the local configuration, and restart. `next_page_token` in the
+provider code is a pagination cursor, not an authentication token.
+
+`/health` reports whether both credential values are present; it does not verify
+that Alpaca accepts them. Options errors distinguish missing credentials,
+authentication rejection (401), and forbidden access or feed entitlement (403).
 
 ## Add your own symbols and preferences
 
@@ -85,12 +114,21 @@ symbols:
     groups: [leader_long_call]
     benchmark_tags: [YOUR_BENCHMARK]
     asset_class: equity
+    confirmed_profile:
+      primary_role: GROWTH
+      risk_tier: HIGH
 ```
 
 `company_quality` is on a 0-2 scale, not 0-10. Each referenced benchmark must
 also be an enabled benchmark entry. Groups are `leader_long_call`,
 `short_term_watch`, `long_term_core`, `long_term_growth`, `high_risk_growth`.
-Group selection is your decision, not a signal to buy.
+Group selection is your decision, not a signal to buy. The example role and risk
+tier are illustrative; choose values appropriate to your own research.
+
+At startup, eligible symbols with explicit `confirmed_profile` metadata can
+initialize new database profiles. Existing confirmed profiles are not overwritten
+by YAML edits: the database is the runtime authority when available. A stock
+without a confirmed profile may be absent from the normal scan universe.
 
 For Classification/confirmed-profile workflows, see
 `ConfirmedProfileBootstrap` in `app/classification/models.py`; only supply your
@@ -139,66 +177,45 @@ when changing their outer limits.
 Stock R is not option R, a probability, or a guarantee. Gaps and slippage can
 exceed a planned loss. The app has no backtest validating these defaults.
 
-## Manual upload to YOUR personal GitHub
+## Troubleshooting
 
-**First verify that you own the code and may share it.** Removing identifiers
-or keys does not grant publishing rights to employer or third-party code. Use
-only an approved GitHub Desktop installation on a managed computer, or follow
-your organization's approved process on an authorized personal computer.
-This exporter installs nothing and does not bypass device or network policy.
+| Symptom | What to check |
+| --- | --- |
+| Missing YAML file at startup | Run all four first-time configuration copy commands. |
+| Empty dashboard or unknown/unconfirmed ticker | The sample watchlist is empty. Add valid symbols and explicit confirmed profiles, restart, and scan. Existing database profiles take precedence over YAML edits. |
+| Missing Alpaca credentials | Set both key fields in local `.env`, then restart. |
+| Provider HTTP 401 | Check the key/secret pair and the paper/live endpoint match. `/health` alone cannot validate credentials. |
+| Provider HTTP 403 | Check account permissions and the selected feed; OPRA requires the appropriate entitlement. |
+| HTTP 429 or timeout | Check provider limits and network availability; retry later. A timeout alone does not prove a key expired. |
+| No suitable option contracts | Inspect eligibility, filters, and data-quality reasons; an empty result can be valid. |
+| Address already in use | Run with `--port 9069` and open `http://127.0.0.1:9069/`. |
 
-### GitHub Desktop (recommended)
+## Scope and validation status
 
-1. **Copy this export folder outside every existing Git checkout first**, for
-   example into a new folder under your personal Documents directory. The
-   exporter's default `exports/` location is still inside the original worktree;
-   Desktop may otherwise discover its parent repository. Never add or publish
-   the original project, worktree, or its `.git` file.
-2. In Desktop Settings/Preferences -> Accounts, verify the signed-in GitHub.com
-   account is your **personal account**. Under Git, verify the commit author
-   name/email; a personal GitHub noreply email avoids exposing a work email.
-   Account sign-in and commit identity are separate settings.
-3. File -> Add Local Repository -> select this exported folder. It has no `.git`;
-   use the offered **Create a Repository here** action. Check the displayed
-   final local path is exactly this folder, not an empty nested folder.
-   Do not initialize from, copy, or attach the original Git history.
-   If Desktop shows old commits, an existing remote, or the original project's
-   path, stop: that is not the fresh sharing repository.
-4. Review the initial Changes list file by file. `.env`, actual `config/*.yaml`,
-   databases, logs and holdings must not appear. `.env.example` must have blank
-   credential values. Do not force-add ignored files. Do not commit screenshots
-   or real scan/portfolio outputs.
-5. Commit the reviewed sharing files, then choose Publish Repository. Confirm
-   the owner is your personal username (not an employer organization) and keep
-   **Keep this code private** selected for the first publication.
-6. Verify the repository URL and Files/Commits in your browser. Check again before
-   later changing visibility to public. A private repository is still an upload.
+- Research only: no order execution, automated position sizing, or broker holdings import.
+- Default thresholds are unbacktested research settings, not personalized advice.
+  Gaps, stale data, and slippage can invalidate an apparent setup.
+- The Starter module is dormant, disabled by default, and has an empty approved
+  universe. Review its policy before enabling experimental workflows.
+- This sharing version excludes original tests and fixtures. Python syntax was
+  checked during the initial import; application startup, live Alpaca access, and
+  end-to-end behavior were not verified in that import. Installing the `test`
+  extra does not restore the omitted test suite.
+- Legacy internal names such as the `ceg-trader` package and `ceg_trader.db` remain
+  for compatibility; the displayed project name is Local Stock Lab.
 
-If Desktop does not offer in-place creation, create a new empty personal
-repository in Desktop and copy the **contents of this export only**, including
-`.gitignore` and `.env.example`, into it. Do not copy the original app folder.
+## Privacy and sharing
 
-### Browser alternative
+The sharing copy excludes personal credentials, actual watchlists, confirmed
+profiles, databases, scan history, logs, and the source project's Git history.
+Keep `.env`, personal configuration, runtime data, and account screenshots local.
+The [.gitignore](.gitignore) covers common local files, but cannot protect secrets
+added to tracked files or files deliberately force-added to Git.
 
-On GitHub.com verify your personal login, create a new private repository under
-your personal owner, then Add file -> Upload files. Upload this export's contents,
-preserving subdirectories, in batches if required. Uploading a ZIP stores a ZIP;
-GitHub does not unpack it into a runnable repository.
+Source code includes the scoring logic and default thresholds. Keeping your
+personal configuration private does not hide those rules in a public repository.
 
-Finder Cmd+Shift+. shows hidden files. Ensure `.gitignore` and `.env.example`
-are included (create them manually in the GitHub editor if the picker omits
-them). Do not upload the local `.env` or actual configs. GitHub Desktop handles
-these hidden files and folder structure more reliably.
-
-## Safety after publishing
-
-The ignore rules prevent ordinary addition of private files; they do not protect
-files already tracked, force-adds, edited examples, comments or commit messages.
-Never paste real keys into a tracked file. If a key is ever committed or uploaded,
-revoke/rotate it with the provider immediately; deleting the latest file does
-not erase history or copies. Resolve repository history exposure separately.
-
-For a later release, export to a new empty folder, review the changes, then copy
-only reviewed code/example files into the personal repository. Do not copy
-runtime data back into it. No license is automatically selected; choose one
-only after confirming ownership and dependency obligations.
+See [Sharing a clean project copy](docs/sharing.md) for export and upload guidance.
+[EXPORT-MANIFEST.json](EXPORT-MANIFEST.json) records the initial sharing snapshot;
+it is not a current-file checksum list or a security certification. Later edits,
+including this README revision, can differ from those initial hashes.
