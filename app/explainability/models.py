@@ -1,0 +1,183 @@
+from __future__ import annotations
+
+from enum import StrEnum
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.states import SetupState
+
+
+class ReasonCode(StrEnum):
+    NO_ACTIVE_DIP_OR_BREAKOUT_SETUP = "NO_ACTIVE_DIP_OR_BREAKOUT_SETUP"
+    DRAWDOWN_THRESHOLD_REACHED = "DRAWDOWN_THRESHOLD_REACHED"
+    DAILY_DECLINE_THRESHOLD = "DAILY_DECLINE_THRESHOLD"
+    BELOW_VWAP = "BELOW_VWAP"
+    WEAK_RELATIVE_STRENGTH = "WEAK_RELATIVE_STRENGTH"
+    DOWNSIDE_EXPANSION_SLOWING = "DOWNSIDE_EXPANSION_SLOWING"
+    SELL_VOLUME_DECLINING = "SELL_VOLUME_DECLINING"
+    FAILED_NEW_LOW_EXPANSION = "FAILED_NEW_LOW_EXPANSION"
+    VOLUME_CLIMAX_STABILIZATION = "VOLUME_CLIMAX_STABILIZATION"
+    HIGHER_LOW_CONFIRMED = "HIGHER_LOW_CONFIRMED"
+    VWAP_RECLAIMED = "VWAP_RECLAIMED"
+    RESISTANCE_RECLAIMED = "RESISTANCE_RECLAIMED"
+    ACCEPTANCE_CONFIRMED = "ACCEPTANCE_CONFIRMED"
+    RIGHT_SIDE_REPAIR_CONFIRMED = "RIGHT_SIDE_REPAIR_CONFIRMED"
+    EQUITY_SCORE_THRESHOLD_MET = "EQUITY_SCORE_THRESHOLD_MET"
+    MARKET_CONFIRMATION = "MARKET_CONFIRMATION"
+    NO_ACTIVE_BREAKDOWN = "NO_ACTIVE_BREAKDOWN"
+    SUPPORT_LOST = "SUPPORT_LOST"
+    FRESH_LOWER_LOW = "FRESH_LOWER_LOW"
+    LOWER_HIGH_LOWER_LOW_SEQUENCE = "LOWER_HIGH_LOWER_LOW_SEQUENCE"
+    FAILED_RECLAIM = "FAILED_RECLAIM"
+    UPTREND_ACTIVE = "UPTREND_ACTIVE"
+    TREND_SUPPORT_HELD = "TREND_SUPPORT_HELD"
+    PRICE_EXTENDED_FROM_VWAP = "PRICE_EXTENDED_FROM_VWAP"
+    PRICE_EXTENDED_FROM_EMA = "PRICE_EXTENDED_FROM_EMA"
+    MULTIPLE_DIRECTIONAL_BARS = "MULTIPLE_DIRECTIONAL_BARS"
+    OVERSOLD_MOMENTUM = "OVERSOLD_MOMENTUM"
+    INTRADAY_STABILIZATION = "INTRADAY_STABILIZATION"
+    POSITIVE_FIFTEEN_MINUTE_RETURN = "POSITIVE_FIFTEEN_MINUTE_RETURN"
+    PRICE_AT_OR_ABOVE_VWAP = "PRICE_AT_OR_ABOVE_VWAP"
+    PRICE_AT_OR_ABOVE_SUPPORT = "PRICE_AT_OR_ABOVE_SUPPORT"
+    PRICE_ABOVE_EMA9 = "PRICE_ABOVE_EMA9"
+    EMA9_AT_OR_ABOVE_EMA20 = "EMA9_AT_OR_ABOVE_EMA20"
+    PRIOR_REPAIR_CONTEXT = "PRIOR_REPAIR_CONTEXT"
+    SUPPORT_RECLAIMED = "SUPPORT_RECLAIMED"
+    STRUCTURAL_SETUP_CONFIRMED = "STRUCTURAL_SETUP_CONFIRMED"
+
+
+class MissingConditionCode(StrEnum):
+    HIGHER_LOW_NOT_CONFIRMED = "HIGHER_LOW_NOT_CONFIRMED"
+    HIGHER_LOW_ABSENT = "HIGHER_LOW_ABSENT"
+    VWAP_RECLAIM_NOT_CONFIRMED = "VWAP_RECLAIM_NOT_CONFIRMED"
+    RECLAIM_ABSENT = "RECLAIM_ABSENT"
+    REPAIR_BREAKOUT_MISSING = "REPAIR_BREAKOUT_MISSING"
+    ACCEPTANCE_ABOVE_RESISTANCE_MISSING = (
+        "ACCEPTANCE_ABOVE_RESISTANCE_MISSING"
+    )
+    RECENT_SWING_HIGH_NOT_BROKEN = "RECENT_SWING_HIGH_NOT_BROKEN"
+    BENCHMARK_CONFIRMATION_MISSING = "BENCHMARK_CONFIRMATION_MISSING"
+    TWO_BAR_CONFIRMATION_MISSING = "TWO_BAR_CONFIRMATION_MISSING"
+    PRIOR_REPAIR_CONTEXT_MISSING = "PRIOR_REPAIR_CONTEXT_MISSING"
+    LEADER_WORKFLOW_PERMISSION_MISSING = "LEADER_WORKFLOW_PERMISSION_MISSING"
+    MOMENTUM_NOT_CONFIRMED = "MOMENTUM_NOT_CONFIRMED"
+    ENTRY_PLAN_NOT_QUALIFIED = "ENTRY_PLAN_NOT_QUALIFIED"
+
+
+class TriggerType(StrEnum):
+    WAIT_FOR_MEANINGFUL_DIP_OR_BREAKOUT_SETUP = (
+        "WAIT_FOR_MEANINGFUL_DIP_OR_BREAKOUT_SETUP"
+    )
+    HIGHER_LOW_AND_RECLAIM = "HIGHER_LOW_AND_RECLAIM"
+    CONFIRMED_HIGHER_LOW = "CONFIRMED_HIGHER_LOW"
+    BREAK_RESISTANCE_WITH_ACCEPTANCE = "BREAK_RESISTANCE_WITH_ACCEPTANCE"
+    MAINTAIN_REPAIR_STRUCTURE = "MAINTAIN_REPAIR_STRUCTURE"
+    RECLAIM_SUPPORT_AND_HIGHER_LOW = "RECLAIM_SUPPORT_AND_HIGHER_LOW"
+    BREAK_RECENT_SWING_HIGH = "BREAK_RECENT_SWING_HIGH"
+    CONTROLLED_PULLBACK_TO_SUPPORT = "CONTROLLED_PULLBACK_TO_SUPPORT"
+    OPTIONS_SCANNER_ELIGIBLE = "OPTIONS_SCANNER_ELIGIBLE"
+    ESTABLISH_REPAIR_CONTEXT = "ESTABLISH_REPAIR_CONTEXT"
+    LOCAL_ACCEPTANCE_OR_RECLAIM = "LOCAL_ACCEPTANCE_OR_RECLAIM"
+    BENCHMARK_CONFIRMATION = "BENCHMARK_CONFIRMATION"
+    LEADER_WORKFLOW_REQUIRED = "LEADER_WORKFLOW_REQUIRED"
+    REVIEW_ENTRY_PLAN = "REVIEW_ENTRY_PLAN"
+    MOMENTUM_CONFIRMATION = "MOMENTUM_CONFIRMATION"
+
+
+class InvalidationType(StrEnum):
+    BREAKDOWN_CONTINUATION = "BREAKDOWN_CONTINUATION"
+    FRESH_EXPANSION_LOW = "FRESH_EXPANSION_LOW"
+    BREAK_BELOW_LEVEL = "BREAK_BELOW_LEVEL"
+    LOSE_RECLAIMED_SUPPORT = "LOSE_RECLAIMED_SUPPORT"
+    FRESH_LOWER_LOW = "FRESH_LOWER_LOW"
+    MARKET_CONFIRMATION_FAILED = "MARKET_CONFIRMATION_FAILED"
+    REPAIR_STRUCTURE_FAILED = "REPAIR_STRUCTURE_FAILED"
+    RECLAIM_SUPPORT_AND_HIGHER_LOW = "RECLAIM_SUPPORT_AND_HIGHER_LOW"
+    TREND_STRUCTURE_FAILED = "TREND_STRUCTURE_FAILED"
+
+
+class LevelSource(StrEnum):
+    ENTRY_STRUCTURAL_STOP = "ENTRY_STRUCTURAL_STOP"
+    VWAP = "VWAP"
+    RECENT_SWING_HIGH = "RECENT_SWING_HIGH"
+    RECENT_SWING_LOW = "RECENT_SWING_LOW"
+    RECENT_HIGHER_LOW = "RECENT_HIGHER_LOW"
+    BROKEN_SUPPORT = "BROKEN_SUPPORT"
+    RECLAIMED_RESISTANCE = "RECLAIMED_RESISTANCE"
+    RECLAIMED_SUPPORT = "RECLAIMED_SUPPORT"
+    EMA20 = "EMA20"
+    OPENING_RANGE_HIGH = "OPENING_RANGE_HIGH"
+    OPENING_RANGE_LOW = "OPENING_RANGE_LOW"
+    LOCAL_15M_PIVOT_HIGH = "LOCAL_15M_PIVOT_HIGH"
+    LOCAL_15M_PIVOT_LOW = "LOCAL_15M_PIVOT_LOW"
+    MAJOR_DAILY_SWING_HIGH = "MAJOR_DAILY_SWING_HIGH"
+    MAJOR_DAILY_SWING_LOW = "MAJOR_DAILY_SWING_LOW"
+
+
+class ConfidenceNoteCode(StrEnum):
+    PARTIAL_STRUCTURE_CONFIRMATION = "PARTIAL_STRUCTURE_CONFIRMATION"
+    FULL_STRUCTURE_CONFIRMATION = "FULL_STRUCTURE_CONFIRMATION"
+    BENCHMARK_CONFIRMATION_PRESENT = "BENCHMARK_CONFIRMATION_PRESENT"
+    BENCHMARK_CONFIRMATION_MISSING = "BENCHMARK_CONFIRMATION_MISSING"
+    EQUITY_SCORE_SUPPORTIVE = "EQUITY_SCORE_SUPPORTIVE"
+    EQUITY_SCORE_BELOW_THRESHOLD = "EQUITY_SCORE_BELOW_THRESHOLD"
+
+
+class _LevelCondition(BaseModel):
+    level: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    source: LevelSource | None = None
+    description: str = Field(min_length=1, max_length=240)
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def normalize_description(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def validate_level_source_pair(self) -> "_LevelCondition":
+        if self.level is not None and self.source is None:
+            raise ValueError("A numeric level requires a factual level source")
+        if self.level is None and self.source is not None:
+            raise ValueError("A level source cannot be set without a numeric level")
+        return self
+
+
+class NextTrigger(_LevelCondition):
+    type: TriggerType
+
+
+class Invalidation(_LevelCondition):
+    type: InvalidationType
+
+
+class SetupExplanation(BaseModel):
+    ticker: str
+    state: SetupState
+    reasons: list[ReasonCode] = Field(min_length=1)
+    next_trigger: NextTrigger
+    invalidation: Invalidation | None
+    missing_conditions: list[MissingConditionCode] = Field(default_factory=list)
+    confidence_notes: list[ConfidenceNoteCode] = Field(default_factory=list)
+
+    @field_validator("ticker", mode="before")
+    @classmethod
+    def normalize_ticker(cls, value: object) -> object:
+        return value.strip().upper() if isinstance(value, str) else value
+
+    @field_validator("ticker")
+    @classmethod
+    def validate_ticker(cls, value: str) -> str:
+        if not value:
+            raise ValueError("ticker cannot be blank")
+        return value
+
+    @field_validator("reasons", "missing_conditions", "confidence_notes")
+    @classmethod
+    def ordered_deduplicate[T](cls, values: list[T]) -> list[T]:
+        return list(dict.fromkeys(values))
+
+    @model_validator(mode="after")
+    def validate_invalidation(self) -> "SetupExplanation":
+        if self.state is not SetupState.NORMAL and self.invalidation is None:
+            raise ValueError("Non-NORMAL explanations require an invalidation")
+        return self

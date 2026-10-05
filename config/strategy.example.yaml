@@ -1,0 +1,7 @@
+# Code defaults, not the original owner's private configuration.
+# Review all thresholds before use; see app/config.py and app/entry_models.py.
+alpaca: {}
+thresholds: {}
+structure: {}
+entry: {}
+options: {}
